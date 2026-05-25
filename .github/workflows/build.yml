@@ -1,10 +1,13 @@
-name: Build GrimLedger EXE
+name: Build & Release GrimLedger
 
 on:
-  workflow_dispatch:    # Nur manuell: Actions → "Build GrimLedger EXE" → "Run workflow"
+  workflow_dispatch:    # Nur manuell: Actions → "Build & Release GrimLedger" → "Run workflow"
+
+permissions:
+  contents: write       # needed to create GitHub Releases
 
 jobs:
-  build-windows:
+  release-windows:
     runs-on: windows-latest
 
     steps:
@@ -19,14 +22,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build Vite + package with electron-builder
+      - name: Build & publish release
+        # electron-builder reads the version from package.json,
+        # creates a GitHub Release tagged v<version> and uploads the installer.
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload EXE as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: GrimLedger-Windows
-          path: release/*.exe
-          retention-days: 30
+          # Tell electron-builder to publish (creates the GitHub Release + tag)
+          EP_DRAFT: false
