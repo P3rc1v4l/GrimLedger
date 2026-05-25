@@ -1,13 +1,11 @@
 name: Build GrimLedger EXE
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:          # lets you trigger manually from GitHub UI
+  workflow_dispatch:    # Nur manuell: Actions → "Build GrimLedger EXE" → "Run workflow"
 
 jobs:
   build-windows:
-    runs-on: windows-latest   # MUST be Windows to produce a proper .exe
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
@@ -17,21 +15,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build Vite + package with electron-builder
         run: npm run dist:win
         env:
-          # electron-builder needs this on Windows CI
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload EXE as artifact
         uses: actions/upload-artifact@v4
         with:
           name: GrimLedger-Windows
-          # electron-builder puts the installer in release/
           path: release/*.exe
-          retention-days: 30   # artifact stays downloadable for 30 days
+          retention-days: 30
