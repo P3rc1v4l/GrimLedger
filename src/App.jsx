@@ -9,6 +9,7 @@ import ShopPanel from './components/panels/ShopPanel'
 import ForgePanel from './components/panels/ForgePanel'
 import DungeonPanel from './components/panels/DungeonPanel'
 import CryptPanel from './components/panels/CryptPanel'
+import QuestPanel from './components/panels/QuestPanel'
 import PrestigePanel from './components/panels/PrestigePanel'
 import LogPanel from './components/panels/LogPanel'
 
@@ -18,6 +19,7 @@ const PANELS = {
   forge:    <ForgePanel />,
   dungeon:  <DungeonPanel />,
   crypt:    <CryptPanel />,
+  quests:   <QuestPanel />,
   prestige: <PrestigePanel />,
   log:      <LogPanel />,
 }

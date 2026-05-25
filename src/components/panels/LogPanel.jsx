@@ -13,6 +13,7 @@ const TYPE_COLOR = {
   system:   'border-stone-600 text-stone-400',
   normal:   'border-stone-700 text-stone-500',
   prestige: 'border-violet-600 text-violet-300',
+  quest:    'border-emerald-600 text-emerald-300',
 }
 
 export default function LogPanel() {

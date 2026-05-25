@@ -7,6 +7,7 @@ import {
   xpToNext,
 } from '../utils/constants'
 import { randInt, pick, canAfford } from '../utils/helpers'
+import { generateDailyQuests, getTodayStart, QUEST_REFRESH_MS } from '../systems/quests'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const freshBuildings = () =>
@@ -15,7 +16,6 @@ const freshBuildings = () =>
 const getPrestigeBonus = (count) => {
   if (count === 0) return { goldMult: 1, xpMult: 1, craftMult: 1, soulRate: 1 }
   if (count <= PRESTIGE_BONUSES.length) return PRESTIGE_BONUSES[count - 1]
-  // Beyond max defined: compound +10% per extra run
   const base = PRESTIGE_BONUSES[PRESTIGE_BONUSES.length - 1]
   const extra = count - PRESTIGE_BONUSES.length
   return {
@@ -27,8 +27,35 @@ const getPrestigeBonus = (count) => {
   }
 }
 
+// ─── Quest helpers ────────────────────────────────────────────────────────────
+// Update quest progress when a tracked stat changes.
+// statKey: one of heroesServed | itemsCrafted | itemsSold | skeletonsSummoned | runsCompleted
+// delta: how much it increased (usually 1)
+const advanceQuests = (state, statKey, delta = 1) => {
+  for (const q of state.quests.active) {
+    if (q.completed) continue
+
+    if (q.type === statKey) {
+      // Simple quest
+      q.progress = Math.min(q.goal, (q.progress ?? 0) + delta)
+      if (q.progress >= q.goal) q.completed = true
+    } else if (q.conditions) {
+      // Mixed quest: advance matching condition
+      for (let i = 0; i < q.conditions.length; i++) {
+        if (q.conditions[i].type === statKey) {
+          q.conditionProgress[i] = Math.min(q.conditions[i].goal, (q.conditionProgress[i] ?? 0) + delta)
+        }
+      }
+      // Mark complete when ALL conditions met
+      if (q.conditions.every((c, i) => q.conditionProgress[i] >= c.goal)) {
+        q.completed = true
+      }
+    }
+  }
+}
+
 // ─── Initial state factory ────────────────────────────────────────────────────
-const INITIAL = () => ({
+const INITIAL = (prestigeCount = 0) => ({
   gold: STARTING.gold,
   souls: 0,
   materials: { ...STARTING.materials },
@@ -48,8 +75,16 @@ const INITIAL = () => ({
   // Prestige — persists across resets
   prestige: {
     count: 0,
-    totalGoldEarned: 0,   // tracks across ALL runs (never resets)
-    unlockedAt: [],       // timestamps of each prestige
+    totalGoldEarned: 0,
+    unlockedAt: [],
+  },
+
+  // Quests — refresh daily
+  quests: {
+    active: generateDailyQuests(prestigeCount),
+    lastRefresh: getTodayStart(),
+    totalCompleted: 0,
+    totalClaimed: 0,
   },
 
   stats: {
@@ -57,8 +92,8 @@ const INITIAL = () => ({
     itemsCrafted: 0,
     itemsSold: 0,
     skeletonsSummoned: 0,
-    totalGoldEarned: 0,   // resets each run
-    runGoldEarned: 0,     // alias for prestige check
+    totalGoldEarned: 0,
+    runGoldEarned: 0,
     totalPlayTime: 0,
     runsCompleted: 0,
   },
@@ -115,10 +150,6 @@ export const useGameStore = create(
           s.player.xp -= s.player.xpToNext
           s.player.level++
           s.player.xpToNext = xpToNext(s.player.level)
-          s.player.stats = {
-            strength:     (s.player.stats?.strength     ?? 5) + 1,
-            intelligence: (s.player.stats?.intelligence ?? 5) + 1,
-          }
         }
       }),
 
@@ -172,6 +203,7 @@ export const useGameStore = create(
           st.heroes.unshift(hero)
           if (st.heroes.length > 10) st.heroes.pop()
           st.stats.heroesServed++
+          advanceQuests(st, 'heroesServed', 1)
         })
         get().addLog(`${hero.icon} ${hero.name} (${hero.class} Lvl ${hero.level}) gibt ${spent} Gold aus!`, 'gold')
       },
@@ -213,6 +245,7 @@ export const useGameStore = create(
         set((st) => {
           st.dungeonRuns = st.dungeonRuns.filter((r) => r.id !== runId)
           st.stats.runsCompleted++
+          advanceQuests(st, 'runsCompleted', 1)
         })
         const extras = [
           run.reward.bones > 0 && `${run.reward.bones} 🦴`,
@@ -238,6 +271,7 @@ export const useGameStore = create(
           st.materials.bones -= 3
           st.undead.push(sk)
           st.stats.skeletonsSummoned++
+          advanceQuests(st, 'skeletonsSummoned', 1)
         })
         get().addLog(`💀 ${sk.name} beschworen! (${get().undead.length}/${max})`, 'undead')
         get().notify(`${sk.name} erwacht!`, 'success')
@@ -262,7 +296,11 @@ export const useGameStore = create(
         const value = Math.floor(recipe.baseValue * (1 + bonus) * craftMult)
 
         const item = { id: Date.now(), recipeId, name: recipe.name, icon: recipe.icon, type: recipe.type, value, bonus: recipe.bonus }
-        set((st) => { st.inventory.push(item); st.stats.itemsCrafted++ })
+        set((st) => {
+          st.inventory.push(item)
+          st.stats.itemsCrafted++
+          advanceQuests(st, 'itemsCrafted', 1)
+        })
         get().addLog(`⚒️ ${recipe.icon} ${recipe.name} (${value} 💰) geschmiedet!`, 'craft')
         get().notify(`${recipe.name} fertig!`, 'success')
       },
@@ -272,18 +310,75 @@ export const useGameStore = create(
         const item = s.inventory.find((i) => i.id === itemId)
         if (!item) return
         get().addGold(item.value)
-        set((st) => { st.inventory = st.inventory.filter((i) => i.id !== itemId); st.stats.itemsSold++ })
+        set((st) => {
+          st.inventory = st.inventory.filter((i) => i.id !== itemId)
+          st.stats.itemsSold++
+          advanceQuests(st, 'itemsSold', 1)
+        })
         get().addLog(`💰 ${item.name} für ${item.value} Gold verkauft.`, 'gold')
       },
 
       sellAll: () => {
         const s = get()
         if (!s.inventory.length) return
+        const count = s.inventory.length
         const total = s.inventory.reduce((sum, i) => sum + i.value, 0)
         get().addGold(total)
-        set((st) => { st.stats.itemsSold += st.inventory.length; st.inventory = [] })
+        set((st) => {
+          st.stats.itemsSold += count
+          advanceQuests(st, 'itemsSold', count)
+          st.inventory = []
+        })
         get().addLog(`💰 Alles verkauft für ${total} Gold!`, 'gold')
         get().notify(`${total} Gold erhalten!`, 'success')
+      },
+
+      // ── QUESTS ───────────────────────────────────────────────────────────
+      claimQuest: (questId) => {
+        const s = get()
+        const quest = s.quests.active.find((q) => q.id === questId)
+        if (!quest || !quest.completed || quest.claimed) return
+
+        // Grant rewards
+        const r = quest.reward
+        if (r.gold)   get().addGold(r.gold)
+        if (r.xp)     get().addXP(r.xp)
+        if (r.souls)  set((st) => { st.souls += r.souls })
+        if (r.materials) {
+          for (const [mat, amt] of Object.entries(r.materials)) {
+            set((st) => { st.materials[mat] = (st.materials[mat] ?? 0) + amt })
+          }
+        }
+
+        set((st) => {
+          const q = st.quests.active.find((q) => q.id === questId)
+          if (q) q.claimed = true
+          st.quests.totalClaimed++
+          st.quests.totalCompleted++
+        })
+
+        const rewardStr = [
+          r.gold && `${r.gold} 💰`,
+          r.xp   && `${r.xp} XP`,
+          r.souls && `${r.souls} Seelen`,
+        ].filter(Boolean).join(' · ')
+        get().addLog(`🎯 Quest abgeschlossen: "${quest.title}" — ${rewardStr}`, 'quest')
+        get().notify(`Quest: ${quest.title}! ${rewardStr}`, 'success')
+      },
+
+      // Called by the tick — refresh quests at midnight
+      checkQuestRefresh: () => {
+        const s = get()
+        const todayStart = getTodayStart()
+        if (s.quests.lastRefresh < todayStart) {
+          const fresh = generateDailyQuests(s.prestige.count)
+          set((st) => {
+            st.quests.active = fresh
+            st.quests.lastRefresh = todayStart
+          })
+          get().addLog('📋 Neue Tagesquests verfügbar!', 'quest')
+          get().notify('Neue Quests verfügbar! 📋', 'info')
+        }
       },
 
       // ── PRESTIGE ─────────────────────────────────────────────────────────
@@ -301,18 +396,25 @@ export const useGameStore = create(
 
         const newCount = s.prestige.count + 1
         const totalGold = s.prestige.totalGoldEarned
+        const totalCompleted = s.quests.totalCompleted
+        const totalClaimed   = s.quests.totalClaimed
         const prevLog = s.log.slice(0, 5)
         const bonus = getPrestigeBonus(newCount)
 
         set(() => ({
-          ...INITIAL(),
-          // Preserve prestige data
+          ...INITIAL(newCount),
           prestige: {
             count: newCount,
             totalGoldEarned: totalGold,
             unlockedAt: [...s.prestige.unlockedAt, Date.now()],
           },
-          tutorial: { active: false, step: 6 }, // skip tutorial after first prestige
+          quests: {
+            active: generateDailyQuests(newCount),
+            lastRefresh: getTodayStart(),
+            totalCompleted,
+            totalClaimed,
+          },
+          tutorial: { active: false, step: 6 },
           log: [
             { id: 0, msg: `✨ Prestige #${newCount} durchgeführt! Bonus: ${bonus.label ?? getPrestigeLabel(newCount)}`, type: 'prestige', ts: Date.now() },
             ...prevLog,
@@ -352,6 +454,8 @@ export const useGameStore = create(
         for (const run of s.dungeonRuns) {
           if (now - run.startTime >= run.duration) get().completeRun(run.id)
         }
+        // Quest refresh check (throttled — only once per minute at most)
+        if (Math.random() < 1 / 60) get().checkQuestRefresh()
       },
 
       // ── Hard reset ───────────────────────────────────────────────────────
@@ -360,7 +464,7 @@ export const useGameStore = create(
       },
     })),
     {
-      name: 'grimlledger-v3',
+      name: 'grimlledger-v4',
       partialize: (s) => ({
         gold: s.gold,
         souls: s.souls,
@@ -372,6 +476,7 @@ export const useGameStore = create(
         inventory: s.inventory,
         stats: s.stats,
         prestige: s.prestige,
+        quests: s.quests,
         tutorial: s.tutorial,
         log: s.log.slice(0, 40),
         logId: s.logId,
