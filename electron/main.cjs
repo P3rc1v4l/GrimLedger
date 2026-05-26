@@ -2,6 +2,10 @@
 const { app, BrowserWindow, shell, ipcMain } = require('electron')
 const path = require('path')
 
+// Set userData to a stable path that NSIS uninstaller won't touch.
+// %APPDATA%\GrimLedger stays intact across updates and reinstalls.
+app.setPath('userData', path.join(app.getPath('appData'), 'GrimLedger'))
+
 // electron-updater is a runtime dep — guard for dev environments
 let autoUpdater = null
 try {

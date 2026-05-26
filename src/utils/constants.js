@@ -1,7 +1,7 @@
 // ─── GRIM LEDGER — Spielkonstanten ───────────────────────────────────────────
 
 export const TICK_MS    = 200   // 5 ticks/sec — smooth production
-export const SAVE_KEY   = 'grimleger-v5'
+export const SAVE_KEY   = 'grimleger-save'   // NEVER change this — changing it wipes all saves
 export const REPO_OWNER = 'P3rc1v4l'
 export const REPO_NAME  = 'GrimLedger'
 

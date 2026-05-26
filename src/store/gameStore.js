@@ -583,22 +583,48 @@ export const useGameStore = create(
     })),
     {
       name: SAVE_KEY,
+      // merge: deep-merge saved state into initial state so NEW fields added
+      // in future versions get their defaults instead of being undefined.
+      merge: (persisted, current) => {
+        const p = persisted ?? {}
+        return {
+          ...current,
+          // Core game state — always restore from save
+          resources:     { ...current.resources,     ...(p.resources     ?? {}) },
+          buildings:     { ...current.buildings,     ...(p.buildings     ?? {}) },
+          researchDone:  p.researchDone  ?? current.researchDone,
+          summons:       p.summons       ?? current.summons,
+          totalCollected:{ ...current.totalCollected, ...(p.totalCollected ?? {}) },
+          stats:         { ...current.stats,         ...(p.stats         ?? {}) },
+          player:        { ...current.player,        ...(p.player        ?? {}) },
+          prestige:      { ...current.prestige,      ...(p.prestige      ?? {}) },
+          quests:        p.quests        ?? current.quests,
+          tutorial:      { ...current.tutorial,      ...(p.tutorial      ?? {}) },
+          // Settings: merge so new settings get defaults but existing prefs survive
+          settings:      { ...current.settings,      ...(p.settings      ?? {}) },
+          // Achievements: merge so new achievements list is recognized
+          achievements:  { ...current.achievements,  ...(p.achievements  ?? {}) },
+          lastSaveTime:  p.lastSaveTime  ?? current.lastSaveTime,
+          log:           p.log           ?? current.log,
+          logId:         p.logId         ?? current.logId,
+        }
+      },
       partialize: (s) => ({
-        resources:    s.resources,
-        buildings:    s.buildings,
-        researchDone: s.researchDone,
-        summons:      s.summons,
-        totalCollected: s.totalCollected,
-        stats:        s.stats,
-        player:       s.player,
-        prestige:     s.prestige,
-        quests:       s.quests,
-        tutorial:     s.tutorial,
-        settings:     s.settings,
-        achievements: s.achievements,
-        lastSaveTime: s.lastSaveTime,
-        log:          s.log.slice(0, 50),
-        logId:        s.logId,
+        resources:     s.resources,
+        buildings:     s.buildings,
+        researchDone:  s.researchDone,
+        summons:       s.summons,
+        totalCollected:s.totalCollected,
+        stats:         s.stats,
+        player:        s.player,
+        prestige:      s.prestige,
+        quests:        s.quests,
+        tutorial:      s.tutorial,
+        settings:      s.settings,
+        achievements:  s.achievements,
+        lastSaveTime:  s.lastSaveTime,
+        log:           s.log.slice(0, 50),
+        logId:         s.logId,
       }),
     }
   )
