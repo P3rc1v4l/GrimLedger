@@ -6,11 +6,8 @@ on:
       create_release:
         description: 'Release erstellen?'
         required: false
-        default: 'true'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
+        default: true
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -34,11 +31,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Read version (PowerShell)
-        id: version
+      - name: Read version
+        id: pkg
         run: |
-          $ver = (Get-Content package.json | ConvertFrom-Json).version
-          echo "version=$ver" >> $env:GITHUB_OUTPUT
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Build EXE
         run: npm run dist:win
@@ -48,25 +45,23 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GrimLedger-Windows-v${{ steps.version.outputs.version }}
+          name: GrimLedger-Windows-v${{ steps.pkg.outputs.version }}
           path: release/*.exe
           retention-days: 30
 
       - name: Create GitHub Release
-        if: ${{ github.event.inputs.create_release == 'true' || github.event_name == 'push' }}
+        if: ${{ inputs.create_release == true || github.event_name == 'push' }}
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: GrimLedger v${{ steps.version.outputs.version }}
+          tag_name: v${{ steps.pkg.outputs.version }}
+          name: GrimLedger v${{ steps.pkg.outputs.version }}
           draft: false
           prerelease: false
           generate_release_notes: false
           body: |
-            ## GrimLedger v${{ steps.version.outputs.version }}
-
+            ## GrimLedger v${{ steps.pkg.outputs.version }}
             Lade die Installer-EXE unten herunter und fuehre sie aus.
-
-            Wenn Windows SmartScreen eine Warnung zeigt: "Weitere Informationen" -> "Trotzdem ausfuehren".
+            Bei SmartScreen-Warnung: "Weitere Informationen" dann "Trotzdem ausfuehren".
           files: release/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
