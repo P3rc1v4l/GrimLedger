@@ -8,7 +8,9 @@ on:
         required: false
         default: 'true'
         type: choice
-        options: ['false', 'true']
+        options:
+          - 'true'
+          - 'false'
   push:
     tags:
       - 'v*'
@@ -32,10 +34,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Read version
+      - name: Read version (PowerShell)
         id: version
-        shell: bash
-        run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+        run: |
+          $ver = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
 
       - name: Build EXE
         run: npm run dist:win
@@ -61,9 +64,9 @@ jobs:
           body: |
             ## GrimLedger v${{ steps.version.outputs.version }}
 
-            Lade die Installer-EXE unten herunter und führe sie aus.
+            Lade die Installer-EXE unten herunter und fuehre sie aus.
 
-            **Hinweis:** Wenn Windows SmartScreen eine Warnung zeigt, klicke auf "Weitere Informationen" → "Trotzdem ausführen".
+            Wenn Windows SmartScreen eine Warnung zeigt: "Weitere Informationen" -> "Trotzdem ausfuehren".
           files: release/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
