@@ -264,11 +264,11 @@ export const QUEST_POOL = [
 export const DAILY_QUEST_COUNT = 3
 
 export const MILESTONE_QUESTS = [
-  { id: 'm1', title: 'Erste Schritte',    desc: '1.000 Seelen gesammelt.',    type: 'totalSeelen', goal: 1000,   reward: { wissen: 30 },         once: true },
-  { id: 'm2', title: 'Das Ledger erwacht', desc: '10.000 Seelen gesammelt.',  type: 'totalSeelen', goal: 10000,  reward: { wissen: 100, leereFragmente: 5 }, once: true },
-  { id: 'm3', title: 'Aufstieg naht',     desc: '50.000 Seelen gesammelt.',   type: 'totalSeelen', goal: 50000,  reward: { abyssMarken: 1 },      once: true },
-  { id: 'm4', title: 'Erster Riss',       desc: 'Forsche erste Technologie.', type: 'researched',  goal: 1,      reward: { wissen: 50 },          once: true },
-  { id: 'm5', title: 'Dunkelheit fällt',  desc: 'Beschwöre erstes Wesen.',    type: 'summoned',    goal: 1,      reward: { seelen: 200 },         once: true },
+  { id: 'm1', title: 'Erste Schritte',     desc: '1.000 Seelen gesammelt.',    type: 'seelen',     goal: 1000,   reward: { wissen: 30 },                     once: true },
+  { id: 'm2', title: 'Das Ledger erwacht', desc: '10.000 Seelen gesammelt.',   type: 'seelen',     goal: 10000,  reward: { wissen: 100, leereFragmente: 5 }, once: true },
+  { id: 'm3', title: 'Aufstieg naht',      desc: '50.000 Seelen gesammelt.',   type: 'seelen',     goal: 50000,  reward: { abyssMarken: 1 },                 once: true },
+  { id: 'm4', title: 'Erster Riss',        desc: 'Forsche erste Technologie.', type: 'researched', goal: 1,      reward: { wissen: 50 },                     once: true },
+  { id: 'm5', title: 'Dunkelheit fällt',   desc: 'Beschwöre erstes Wesen.',    type: 'summoned',   goal: 1,      reward: { seelen: 200 },                    once: true },
 ]
 
 // ── XP-Kurve ──────────────────────────────────────────────────────────────────

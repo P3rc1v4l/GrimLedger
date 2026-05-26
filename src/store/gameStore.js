@@ -8,7 +8,7 @@ import {
 } from '../utils/constants'
 import { canAfford, randInt, pick, getTodayStart } from '../utils/helpers'
 import { calcProductionRates, calcOfflineProduction, getPrestigeProdMult } from '../systems/production'
-import { generateDailyQuests, freshMilestones, advanceQuests, syncResourceQuests } from '../systems/quests'
+import { generateDailyQuests, freshMilestones, advanceQuests, syncAllQuests } from '../systems/quests'
 import { combatTick, startBossFight, bossIsDead } from '../systems/combat'
 import { ACHIEVEMENTS, checkAchievements, calcAchievementBonus } from '../systems/achievements'
 import { EVENTS, EVENT_INTERVAL_BASE_MS, EVENT_INTERVAL_SPREAD } from '../systems/events'
@@ -512,6 +512,12 @@ export const useGameStore = create(
         set((st) => {
           syncResourceQuests(st.quests.daily, st.totalCollected)
           syncResourceQuests(st.quests.milestones, st.totalCollected)
+        })
+
+        // Sync all quests (resource + stat based) every tick
+        set((st) => {
+          syncAllQuests(st.quests.daily,      st.totalCollected, st.stats)
+          syncAllQuests(st.quests.milestones, st.totalCollected, st.stats)
         })
 
         // Quest daily refresh (check ~every 60s)
