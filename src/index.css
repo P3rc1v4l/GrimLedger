@@ -4,102 +4,261 @@
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; margin: 0; }
-  html, body, #root { height: 100%; overflow: hidden; }
+  html { height: 100%; }
   body {
+    height: 100%;
     background: #080608;
     color: #c8b89a;
     font-family: 'EB Garamond', Georgia, serif;
     font-size: 15px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    user-select: none;
+    /* user-select: none ONLY on non-interactive elements — NOT on body,
+       so pointer-events on buttons still work */
   }
+  #root { height: 100%; display: flex; flex-direction: column; }
   h1,h2,h3,h4 { font-family: 'Cinzel', Georgia, serif; letter-spacing: 0.04em; }
 
-  /* Thin scrollbar */
-  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: #0d0a0d; }
   ::-webkit-scrollbar-thumb { background: #4a0000; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #8b0000; }
 }
 
 @layer components {
 
-  /* ── Layout panels ───────────────────────────────── */
+  /* ── Main layout ──────────────────────────────────── */
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background: #080608;
+  }
+  .app-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .app-main {
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  /* ── Panels ──────────────────────────────────────── */
   .grimPanel {
-    @apply relative rounded-lg overflow-hidden border border-blood-dark/60;
+    @apply relative rounded-xl border border-red-950/60;
     background: linear-gradient(160deg, #110d11 0%, #0a080a 100%);
-    box-shadow: inset 0 1px 0 rgba(139,0,0,0.1), 0 4px 24px rgba(0,0,0,0.7);
+    box-shadow:
+      inset 0 1px 0 rgba(139,0,0,0.08),
+      0 8px 32px rgba(0,0,0,0.8),
+      0 0 0 1px rgba(139,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
   }
   .grimPanel-header {
-    @apply flex items-center gap-2.5 px-4 pt-3.5 pb-3 border-b border-blood-dark/40;
+    flex-shrink: 0;
+    @apply flex items-center gap-2.5 px-4 pt-4 pb-3 border-b border-red-950/40;
   }
-  .grimPanel-body { @apply p-4 space-y-3 overflow-y-auto; }
+  .grimPanel-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    @apply p-4 space-y-3;
+  }
 
-  /* ── Buttons ─────────────────────────────────────── */
+  /* ── Buttons — CRITICAL: must be clickable ────────── */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 font-mono text-xs font-medium
-           px-3 py-2 rounded border transition-all duration-150 select-none cursor-pointer
-           disabled:opacity-25 disabled:cursor-not-allowed active:scale-95 whitespace-nowrap;
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-style: solid;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: all;  /* explicit — never blocked */
   }
-  .btn-blood   { @apply btn border-blood-dark/70 bg-blood-dark/30 text-blood-light hover:bg-blood/40 hover:border-blood hover:text-red-300; }
-  .btn-gold    { @apply btn border-gold-dark/60 bg-gold-dark/20 text-gold hover:bg-gold-dark/35 hover:border-gold hover:text-gold-light; }
-  .btn-ghost   { @apply btn border-ash/50 bg-ash-dark/30 text-ash-light hover:bg-ash-dark/50 hover:text-[#c8b89a]; }
-  .btn-rune    { @apply btn border-rune/60 bg-rune/10 text-rune-light hover:bg-rune/20 hover:border-rune-glow; }
-  .btn-danger  { @apply btn border-blood/70 bg-blood-dark/40 text-red-400 hover:bg-blood/40; }
+  .btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .btn:not(:disabled):active { transform: scale(0.96); }
+
+  .btn-blood {
+    @apply btn;
+    border-color: #4a0000;
+    background: rgba(74,0,0,0.35);
+    color: #ff6b6b;
+  }
+  .btn-blood:not(:disabled):hover {
+    border-color: #8b0000;
+    background: rgba(139,0,0,0.45);
+    color: #ff9999;
+    box-shadow: 0 0 12px rgba(139,0,0,0.3);
+  }
+  .btn-gold {
+    @apply btn;
+    border-color: #8a6c1a;
+    background: rgba(138,108,26,0.25);
+    color: #c9a227;
+  }
+  .btn-gold:not(:disabled):hover {
+    border-color: #c9a227;
+    background: rgba(201,162,39,0.3);
+    color: #e8c84a;
+    box-shadow: 0 0 12px rgba(201,162,39,0.2);
+  }
+  .btn-ghost {
+    @apply btn;
+    border-color: rgba(74,64,72,0.5);
+    background: rgba(42,32,40,0.4);
+    color: #6b5f6a;
+  }
+  .btn-ghost:not(:disabled):hover {
+    border-color: rgba(107,95,106,0.7);
+    background: rgba(74,64,72,0.5);
+    color: #c8b89a;
+  }
+  .btn-rune {
+    @apply btn;
+    border-color: rgba(107,33,168,0.6);
+    background: rgba(107,33,168,0.15);
+    color: #9333ea;
+  }
+  .btn-rune:not(:disabled):hover {
+    border-color: rgba(147,51,234,0.8);
+    background: rgba(147,51,234,0.25);
+    color: #c084fc;
+    box-shadow: 0 0 14px rgba(147,51,234,0.3);
+  }
+  .btn-danger {
+    @apply btn;
+    border-color: rgba(139,0,0,0.7);
+    background: rgba(74,0,0,0.4);
+    color: #ef4444;
+  }
+  .btn-danger:not(:disabled):hover {
+    border-color: #8b0000;
+    background: rgba(139,0,0,0.5);
+  }
 
   /* ── Progress ────────────────────────────────────── */
-  .progressTrack { @apply w-full h-1.5 rounded-full overflow-hidden; background: #1a0f1a; }
-  .progressFill  { @apply h-full rounded-full transition-all duration-700 ease-out; }
+  .progressTrack {
+    width: 100%;
+    height: 6px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: #1a0f1a;
+  }
+  .progressFill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.7s ease-out;
+  }
 
-  /* ── Chips / Badges ──────────────────────────────── */
+  /* ── Badges ──────────────────────────────────────── */
   .grimBadge {
-    @apply inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium border;
-  }
-
-  /* ── Resource row ────────────────────────────────── */
-  .resChip {
-    @apply flex items-center gap-1.5 rounded px-2 py-1 border border-blood-dark/30;
-    background: rgba(20,10,20,0.8);
-  }
-
-  /* ── Section labels ──────────────────────────────── */
-  .sectionLabel {
-    @apply font-mono text-xs uppercase tracking-widest text-blood-dark/80;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    border-width: 1px;
+    border-style: solid;
   }
 
   /* ── Stat card ───────────────────────────────────── */
   .statCard {
-    @apply rounded p-2 border border-ash-dark/40;
+    border-radius: 8px;
+    padding: 8px;
+    border: 1px solid rgba(42,32,40,0.4);
     background: rgba(15,10,15,0.7);
   }
-  .statLabel { @apply font-mono text-xs text-ash leading-tight; }
-  .statValue { @apply font-mono text-sm font-medium mt-0.5 leading-tight; }
+  .statLabel { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #4a4048; line-height: 1.2; }
+  .statValue { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; margin-top: 2px; line-height: 1.2; }
 
-  /* ── Log entry ───────────────────────────────────── */
+  /* ── Log ─────────────────────────────────────────── */
   .logEntry {
-    @apply text-xs font-mono border-l-2 pl-2 py-0.5 leading-relaxed;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    border-left-width: 2px;
+    border-left-style: solid;
+    padding: 2px 8px;
+    line-height: 1.5;
   }
 
-  /* ── Nav item ────────────────────────────────────── */
+  /* ── Nav items ───────────────────────────────────── */
   .navItem {
-    @apply flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer transition-all duration-150 select-none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    pointer-events: all;
+    border: 1px solid transparent;
   }
   .navItem-active {
-    @apply navItem border border-blood-dark/60 text-blood-light;
+    @apply navItem;
+    border-color: rgba(74,0,0,0.6);
     background: rgba(139,0,0,0.15);
+    color: #ff6b6b;
   }
   .navItem-inactive {
-    @apply navItem text-ash hover:text-[#c8b89a] hover:bg-void-50/50;
+    @apply navItem;
+    color: #4a4048;
+  }
+  .navItem-inactive:hover {
+    color: #c8b89a;
+    background: rgba(26,15,26,0.6);
   }
 
   /* ── Divider ─────────────────────────────────────── */
-  .grimDivider { @apply border-t border-blood-dark/25 -mx-4; }
-
-  /* ── Tooltip ─────────────────────────────────────── */
-  .grimTooltip {
-    @apply absolute z-50 rounded border border-blood-dark/60 px-3 py-2 text-xs font-mono shadow-2xl pointer-events-none;
-    background: #0d080d;
-    color: #c8b89a;
-    max-width: 220px;
+  .grimDivider {
+    border-top: 1px solid rgba(74,0,0,0.2);
+    margin-left: -16px;
+    margin-right: -16px;
   }
+
+  /* ── Section labels ──────────────────────────────── */
+  .sectionLabel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(74,0,0,0.7);
+  }
+
+  /* ── Tutorial highlight ──────────────────────────── */
+  .tutorial-glow {
+    box-shadow: 0 0 0 2px #c9a227, 0 0 20px rgba(201,162,39,0.4) !important;
+    animation: tutorialPulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes tutorialPulse {
+  0%,100% { box-shadow: 0 0 0 2px #c9a227, 0 0 12px rgba(201,162,39,0.3); }
+  50%      { box-shadow: 0 0 0 3px #e8c84a, 0 0 24px rgba(201,162,39,0.6); }
 }

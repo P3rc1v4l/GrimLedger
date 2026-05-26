@@ -1,20 +1,19 @@
 import { useGameStore } from '../../store/gameStore'
-import { clsx } from 'clsx'
 import { RESOURCES } from '../../utils/constants'
 import { fmt, fmtRate } from '../../utils/helpers'
 import { calcProductionRates } from '../../systems/production'
 
 const LOG_COLORS = {
-  gold:     'border-gold-dark text-gold/80',
-  upgrade:  'border-emerald-800 text-emerald-400',
-  research: 'border-rune/60 text-rune-light',
-  summon:   'border-purple-800 text-purple-400',
-  combat:   'border-blood text-blood-light',
-  quest:    'border-emerald-700 text-emerald-300',
-  prestige: 'border-gold text-gold animate-flicker',
-  system:   'border-ash/40 text-ash',
-  tip:      'border-rune/40 text-rune-light/80',
-  normal:   'border-ash-dark text-ash',
+  gold:     '#c9a227',
+  upgrade:  '#4ade80',
+  research: '#9333ea',
+  summon:   '#a855f7',
+  combat:   '#ef4444',
+  quest:    '#4ade80',
+  prestige: '#c9a227',
+  system:   '#4a4048',
+  tip:      '#6b21a8',
+  normal:   '#2a2028',
 }
 
 export default function RightSidebar() {
@@ -22,34 +21,64 @@ export default function RightSidebar() {
   const { log } = state
   const rates = calcProductionRates(state)
 
-  return (
-    <aside className="w-52 flex-shrink-0 flex flex-col border-l border-blood-dark/30 bg-[#07050a]">
+  const activeRates = Object.entries(RESOURCES)
+    .filter(([k]) => k !== 'abyssMarken' && (rates[k] ?? 0) > 0.001)
 
+  return (
+    <aside style={{
+      width: '180px',
+      flexShrink: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      borderLeft: '1px solid rgba(74,0,0,0.25)',
+      background: '#07050a',
+    }}>
       {/* Production rates */}
-      <div className="p-3 border-b border-blood-dark/25">
-        <div className="sectionLabel mb-2">Produktion / Sek.</div>
-        <div className="space-y-0.5">
-          {Object.entries(RESOURCES)
-            .filter(([k]) => !['abyssMarken'].includes(k))
-            .map(([key, def]) => {
-              const rate = rates[key] ?? 0
-              if (rate < 0.001) return null
-              return (
-                <div key={key} className={clsx('flex justify-between font-mono text-xs', def.color)}>
-                  <span>{def.icon} {def.name}</span>
-                  <span className="text-ash">{fmtRate(rate)}</span>
-                </div>
-              )
-            })}
+      <div style={{ padding: '12px', borderBottom: '1px solid rgba(74,0,0,0.2)', flexShrink: 0 }}>
+        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'rgba(74,0,0,0.7)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+          Produktion / Sek.
         </div>
+        {activeRates.length === 0 ? (
+          <div style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: '#2a2028', fontStyle: 'italic' }}>
+            Noch keine Produktion
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {activeRates.map(([key, def]) => (
+              <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: '#6b5f6a' }}>
+                  {def.icon} {def.name}
+                </span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: '#4a4048' }}>
+                  {(rates[key]).toFixed(2)}/s
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Event log */}
-      <div className="flex-1 flex flex-col overflow-hidden p-3">
-        <div className="sectionLabel mb-2">Chronik</div>
-        <div className="flex-1 overflow-y-auto space-y-0.5 pr-0.5">
+      {/* Log */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '12px' }}>
+        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'rgba(74,0,0,0.7)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px', flexShrink: 0 }}>
+          Chronik
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {log.map((entry) => (
-            <div key={entry.id} className={clsx('logEntry', LOG_COLORS[entry.type] ?? LOG_COLORS.normal)}>
+            <div
+              key={entry.id}
+              style={{
+                fontFamily: 'JetBrains Mono',
+                fontSize: '10px',
+                borderLeft: `2px solid ${LOG_COLORS[entry.type] ?? LOG_COLORS.normal}`,
+                paddingLeft: '6px',
+                paddingTop: '2px',
+                paddingBottom: '2px',
+                lineHeight: 1.4,
+                color: LOG_COLORS[entry.type] ?? LOG_COLORS.normal,
+                opacity: 0.85,
+              }}
+            >
               {entry.msg}
             </div>
           ))}

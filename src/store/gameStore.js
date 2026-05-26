@@ -70,6 +70,7 @@ const INITIAL = (prestigeCount = 0, claimedMilestoneIds = []) => ({
 
   // UI
   activePanel: 'dashboard',
+  tutorial: { active: true, step: 0 },
   log: [
     { id: 0, msg: '📜 Das Grim Ledger öffnet sich...', type: 'system', ts: Date.now() },
     { id: 1, msg: '💡 Die Seelenquelle beginnt zu fließen. Sammle Seelen.', type: 'tip', ts: Date.now() },
@@ -125,6 +126,9 @@ export const useGameStore = create(
 
       // ── Navigation ───────────────────────────────────────────────────────
       setPanel: (panel) => set((s) => { s.activePanel = panel }),
+
+      advanceTutorial: () => set((s) => { if (s.tutorial) s.tutorial.step = (s.tutorial.step ?? 0) + 1 }),
+      dismissTutorial: () => set((s) => { if (s.tutorial) s.tutorial.active = false }),
 
       // ── Buildings ────────────────────────────────────────────────────────
       buildOrUpgrade: (id) => {
@@ -416,6 +420,7 @@ export const useGameStore = create(
         player:       s.player,
         prestige:     s.prestige,
         quests:       s.quests,
+        tutorial:     s.tutorial,
         lastSaveTime: s.lastSaveTime,
         log:          s.log.slice(0, 50),
         logId:        s.logId,

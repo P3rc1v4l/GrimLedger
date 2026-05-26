@@ -1,16 +1,15 @@
 import { useGameStore } from '../../store/gameStore'
-import { clsx } from 'clsx'
 
 const NAV_ITEMS = [
-  { id: 'dashboard',  icon: '📖', label: 'Ledger'       },
-  { id: 'ressourcen', icon: '💀', label: 'Ressourcen'   },
-  { id: 'gebaeude',   icon: '🏛️', label: 'Gebäude'      },
-  { id: 'forschung',  icon: '📜', label: 'Forschung'    },
-  { id: 'beschwoerung',icon:'🔮', label: 'Beschwörung'  },
-  { id: 'bosse',      icon: '⚔️', label: 'Bosse'        },
-  { id: 'quests',     icon: '🎯', label: 'Quests'       },
-  { id: 'aufstieg',   icon: '⬡',  label: 'Aufstieg'     },
-  { id: 'einstellungen',icon:'⚙️',label: 'Einstellungen'},
+  { id: 'dashboard',    icon: '📖', label: 'Ledger'       },
+  { id: 'ressourcen',   icon: '💀', label: 'Ressourcen'   },
+  { id: 'gebaeude',     icon: '🏛️', label: 'Gebäude'      },
+  { id: 'forschung',    icon: '📜', label: 'Forschung'    },
+  { id: 'beschwoerung', icon: '🔮', label: 'Beschwörung'  },
+  { id: 'bosse',        icon: '⚔️', label: 'Bosse'        },
+  { id: 'quests',       icon: '🎯', label: 'Quests'       },
+  { id: 'aufstieg',     icon: '⬡',  label: 'Aufstieg'     },
+  { id: 'einstellungen',icon: '⚙️', label: 'Einstellungen'},
 ]
 
 export default function NavSidebar() {
@@ -22,36 +21,73 @@ export default function NavSidebar() {
     stats: s.stats,
   }))
 
-  const questsReady  = quests.daily.some((q) => q.completed && !q.claimed)
-    || quests.milestones.some((q) => q.completed && !q.claimed)
-  const ascendReady  = canAscend()
+  const questsReady = (quests.daily || []).some((q) => q.completed && !q.claimed)
+    || (quests.milestones || []).some((q) => q.completed && !q.claimed)
+  const ascendReady = canAscend()
 
   return (
-    <nav className="w-44 flex-shrink-0 flex flex-col gap-0.5 py-3 px-2 border-r border-blood-dark/30 bg-[#07050a]">
+    <nav style={{
+      width: '152px',
+      flexShrink: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2px',
+      padding: '12px 8px',
+      borderRight: '1px solid rgba(74,0,0,0.25)',
+      background: '#07050a',
+      overflowY: 'auto',
+    }}>
       {/* Logo */}
-      <div className="px-3 pb-3 mb-1 border-b border-blood-dark/25">
-        <h1 className="font-display text-gold text-sm font-bold leading-tight tracking-widest animate-flicker">
-          GRIM<br />LEDGER
-        </h1>
-        <div className="font-mono text-xs text-blood-dark mt-1">Aufstieg #{stats.ascensions}</div>
+      <div style={{ padding: '4px 8px 12px', borderBottom: '1px solid rgba(74,0,0,0.2)', marginBottom: '6px' }}>
+        <div style={{ fontFamily: 'Cinzel Decorative, Cinzel, serif', fontSize: '13px', color: '#c9a227', fontWeight: 700, lineHeight: 1.2, letterSpacing: '0.05em' }}>
+          GRIM
+        </div>
+        <div style={{ fontFamily: 'Cinzel Decorative, Cinzel, serif', fontSize: '13px', color: '#8b0000', fontWeight: 700, lineHeight: 1.2, letterSpacing: '0.1em' }}>
+          LEDGER
+        </div>
+        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#2a2028', marginTop: '4px' }}>
+          Aufstieg #{stats.ascensions}
+        </div>
       </div>
 
       {NAV_ITEMS.map((item) => {
-        const active  = activePanel === item.id
-        const glowing = (item.id === 'quests' && questsReady) || (item.id === 'aufstieg' && ascendReady)
+        const active   = activePanel === item.id
+        const glowing  = (item.id === 'quests' && questsReady) || (item.id === 'aufstieg' && ascendReady)
+
         return (
           <button
             key={item.id}
             onClick={() => setPanel(item.id)}
-            className={clsx(
-              active ? 'navItem-active' : 'navItem-inactive',
-              glowing && !active && 'animate-bloodPulse border border-blood-dark/50'
-            )}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 10px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              border: active
+                ? '1px solid rgba(74,0,0,0.6)'
+                : glowing
+                ? '1px solid rgba(139,0,0,0.4)'
+                : '1px solid transparent',
+              background: active
+                ? 'rgba(139,0,0,0.15)'
+                : glowing
+                ? 'rgba(74,0,0,0.1)'
+                : 'transparent',
+              color: active ? '#ff6b6b' : glowing ? '#ff4444' : '#4a4048',
+              transition: 'all 0.15s',
+              width: '100%',
+              textAlign: 'left',
+              position: 'relative',
+            }}
+            onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'rgba(26,15,26,0.6)'; e.currentTarget.style.color = '#c8b89a' } }}
+            onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = glowing ? 'rgba(74,0,0,0.1)' : 'transparent'; e.currentTarget.style.color = glowing ? '#ff4444' : '#4a4048' } }}
           >
-            <span className="text-base leading-none w-5 text-center">{item.icon}</span>
-            <span className="font-mono text-xs truncate">{item.label}</span>
-            {glowing && !active && (
-              <span className="ml-auto text-xs text-blood-light font-mono">!</span>
+            <span style={{ fontSize: '15px', lineHeight: 1, width: '20px', textAlign: 'center' }}>{item.icon}</span>
+            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', flex: 1 }}>{item.label}</span>
+            {glowing && (
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: '#ff4444', fontWeight: 700 }}>!</span>
             )}
           </button>
         )
