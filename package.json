@@ -1,7 +1,8 @@
 {
   "name": "grim-ledger",
-  "version": "2.0.1",
+  "version": "2.0.3",
   "description": "GrimLedger – Dunkles Idle-RPG",
+  "author": "P3rc1v4l",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -9,7 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "dist:win": "vite build && electron-builder --win --x64"
+    "dist:win": "vite build && electron-builder --win --x64 --publish always"
   },
   "build": {
     "appId": "com.grimleger.app",
