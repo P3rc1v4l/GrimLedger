@@ -14,11 +14,13 @@ import SummoningPanel   from './components/panels/SummoningPanel'
 import BossPanel        from './components/panels/BossPanel'
 import QuestPanel       from './components/panels/QuestPanel'
 import AscensionPanel   from './components/panels/AscensionPanel'
+import AchievementsPanel from './components/panels/AchievementsPanel'
 import SettingsPanel    from './components/panels/SettingsPanel'
 
 import Notification  from './components/ui/Notification'
 import UpdateBanner  from './components/ui/UpdateBanner'
 import OfflineModal  from './components/ui/OfflineModal'
+import EventModal    from './components/ui/EventModal'
 
 const PANELS = {
   dashboard:     <DashboardPanel />,
@@ -28,6 +30,7 @@ const PANELS = {
   beschwoerung:  <SummoningPanel />,
   bosse:         <BossPanel />,
   quests:        <QuestPanel />,
+  achievements:  <AchievementsPanel />,
   aufstieg:      <AscensionPanel />,
   einstellungen: <SettingsPanel />,
 }
@@ -66,6 +69,7 @@ export default function App() {
       <UpdateBanner />
       <OfflineModal />
       <TutorialOverlay />
+      <EventModal />
     </div>
   )
 }

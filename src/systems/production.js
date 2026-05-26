@@ -1,4 +1,5 @@
 import { BUILDINGS, RESEARCH } from '../utils/constants'
+import { calcAchievementBonus } from './achievements'
 
 // Returns { resourceKey: productionPerSecond } for the current state
 export function calcProductionRates(state) {
@@ -50,10 +51,20 @@ export function calcProductionRates(state) {
   // ── Prestige multiplier ───────────────────────────────────────────────────
   const prestigeMult = getPrestigeProdMult(prestige.count, researchDone)
 
+  // ── Achievement bonus ─────────────────────────────────────────────────────
+  const achievementMult = calcAchievementBonus(state.achievements?.unlocked ?? [])
+
+  // ── Active event buffs ────────────────────────────────────────────────────
+  const now = Date.now()
+  let eventMult = 1
+  for (const buff of (state.activeBuffs ?? [])) {
+    if (buff.endsAt > now && buff.type === 'prodMult') eventMult *= buff.value
+  }
+
   // ── Apply global multipliers ──────────────────────────────────────────────
   const total = {}
   for (const [res, rate] of Object.entries(rates)) {
-    total[res] = rate * globalMult * prestigeMult
+    total[res] = rate * globalMult * prestigeMult * achievementMult * eventMult
   }
 
   // Seelen per second via summons

@@ -31,7 +31,7 @@ export default function RightSidebar() {
       display: 'flex',
       flexDirection: 'column',
       borderLeft: '1px solid rgba(74,0,0,0.25)',
-      background: '#07050a',
+      background: '#0f0a17',
     }}>
       {/* Production rates */}
       <div style={{ padding: '12px', borderBottom: '1px solid rgba(74,0,0,0.2)', flexShrink: 0 }}>

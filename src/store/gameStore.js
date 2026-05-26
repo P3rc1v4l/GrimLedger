@@ -10,6 +10,8 @@ import { canAfford, randInt, pick, getTodayStart } from '../utils/helpers'
 import { calcProductionRates, calcOfflineProduction, getPrestigeProdMult } from '../systems/production'
 import { generateDailyQuests, freshMilestones, advanceQuests, syncResourceQuests } from '../systems/quests'
 import { combatTick, startBossFight, bossIsDead } from '../systems/combat'
+import { ACHIEVEMENTS, checkAchievements, calcAchievementBonus } from '../systems/achievements'
+import { EVENTS, EVENT_INTERVAL_BASE_MS, EVENT_INTERVAL_SPREAD } from '../systems/events'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const freshBuildings = () =>
@@ -71,6 +73,18 @@ const INITIAL = (prestigeCount = 0, claimedMilestoneIds = []) => ({
   // UI
   activePanel: 'dashboard',
   tutorial: { active: true, step: 0 },
+
+  // User settings (persist across resets)
+  settings: {
+    numberNotation: 'short',   // 'short' (K/M/B) | 'scientific' (1.5e6)
+    theme: 'dark',             // 'dark' | 'darker' | 'blood'
+    logSize: 100,              // max log entries shown
+    autoSaveInterval: 30,      // seconds
+    showProductionRates: true,
+    showTutorial: true,
+    offlineCapHours: 8,        // base hours (research can add more)
+    compactNumbers: false,     // show decimals or not
+  },
   log: [
     { id: 0, msg: '📜 Das Grim Ledger öffnet sich...', type: 'system', ts: Date.now() },
     { id: 1, msg: '💡 Die Seelenquelle beginnt zu fließen. Sammle Seelen.', type: 'tip', ts: Date.now() },
@@ -78,6 +92,18 @@ const INITIAL = (prestigeCount = 0, claimedMilestoneIds = []) => ({
   logId: 2,
   notification: null,
   offlineResult: null,   // shown once after reload
+
+  // Achievements (persist across resets — earned forever)
+  achievements: {
+    unlocked: [],     // array of achievement IDs
+  },
+
+  // Active event (shown as modal to player)
+  activeEvent: null,   // { ...eventDef, expiresAt: timestamp }
+  nextEventAt: Date.now() + EVENT_INTERVAL_BASE_MS,
+
+  // Active buffs from events
+  activeBuffs: [],   // [{ type, value, endsAt }]
 
   // Update state (filled by Electron IPC listener)
   updateInfo: null,      // { version, status: 'available'|'downloading'|'downloaded'|'error' }
@@ -129,6 +155,137 @@ export const useGameStore = create(
 
       advanceTutorial: () => set((s) => { if (s.tutorial) s.tutorial.step = (s.tutorial.step ?? 0) + 1 }),
       dismissTutorial: () => set((s) => { if (s.tutorial) s.tutorial.active = false }),
+
+      // ── Settings ──────────────────────────────────────────────────────────
+      updateSettings: (patch) => set((s) => { s.settings = { ...s.settings, ...patch } }),
+      resetTutorial:  ()      => set((s) => { s.tutorial = { active: true, step: 0 }; s.activePanel = 'dashboard' }),
+
+      // ── Achievements ──────────────────────────────────────────────────────
+      checkAchievements: () => {
+        const s = get()
+        const newIds = checkAchievements(s.stats, s.totalCollected, s.achievements.unlocked)
+        if (newIds.length === 0) return
+        set((st) => { st.achievements.unlocked.push(...newIds) })
+        for (const id of newIds) {
+          const ach = ACHIEVEMENTS.find((a) => a.id === id)
+          if (ach) {
+            get().addLog(`🏆 Achievement: "${ach.title}" — ${ach.bonusLabel}`, 'achievement')
+            get().notify(`🏆 ${ach.title}`, 'success')
+          }
+        }
+      },
+
+      // ── Events ────────────────────────────────────────────────────────────
+      acceptEvent: () => {
+        const s = get()
+        const ev = s.activeEvent
+        if (!ev) return
+        const { effect } = ev
+
+        // Instant resource gains/losses
+        if (effect.instant) get().addResources(effect.instant)
+        if (effect.lossFraction) {
+          set((st) => {
+            for (const [k, frac] of Object.entries(effect.lossFraction)) {
+              const loss = Math.floor((st.resources[k] ?? 0) * frac)
+              st.resources[k] = Math.max(0, (st.resources[k] ?? 0) - loss)
+            }
+          })
+        }
+        // Timed buff
+        if (effect.buffType) {
+          const endsAt = Date.now() + effect.buffDuration * 1000
+          set((st) => { st.activeBuffs.push({ type: effect.buffType, value: effect.buffValue, endsAt }) })
+        }
+        // Pakt cost (fraction of resource)
+        if (effect.cost?.knochenFraction) {
+          set((st) => {
+            const loss = Math.floor((st.resources.knochen ?? 0) * effect.cost.knochenFraction)
+            st.resources.knochen = Math.max(0, (st.resources.knochen ?? 0) - loss)
+          })
+        }
+
+        get().addLog(`${ev.icon} Ereignis angenommen: "${ev.title}"`, 'event')
+        set((st) => { st.activeEvent = null; st.nextEventAt = Date.now() + get().nextEventDelay() })
+      },
+
+      rejectEvent: () => {
+        const s = get()
+        const ev = s.activeEvent
+        if (!ev) return
+
+        // Pay reject cost if specified
+        if (ev.rejectCost && canAfford(s.resources, ev.rejectCost)) {
+          get().spendResources(ev.rejectCost)
+          get().addLog(`${ev.icon} Ereignis abgewehrt: "${ev.title}"`, 'event')
+        } else if (ev.rejectCost) {
+          // Can't afford → forced to accept penalty
+          get().acceptEvent()
+          return
+        } else {
+          get().addLog(`${ev.icon} Ereignis abgelehnt: "${ev.title}"`, 'event')
+        }
+
+        set((st) => { st.activeEvent = null; st.nextEventAt = Date.now() + get().nextEventDelay() })
+      },
+
+      nextEventDelay: () => {
+        const spread = EVENT_INTERVAL_BASE_MS * EVENT_INTERVAL_SPREAD
+        return EVENT_INTERVAL_BASE_MS + (Math.random() * 2 - 1) * spread
+      },
+
+      // ── Save/Export/Import ────────────────────────────────────────────────
+      exportSave: () => {
+        const s = get()
+        const data = {
+          version: '2.2.0',
+          exportedAt: new Date().toISOString(),
+          resources: s.resources,
+          buildings: s.buildings,
+          researchDone: s.researchDone,
+          summons: s.summons,
+          totalCollected: s.totalCollected,
+          stats: s.stats,
+          player: s.player,
+          prestige: s.prestige,
+          quests: s.quests,
+          achievements: s.achievements,
+          settings: s.settings,
+        }
+        const json = JSON.stringify(data, null, 2)
+        const blob = new Blob([json], { type: 'application/json' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href = url
+        a.download = `GrimLedger-Save-${new Date().toISOString().slice(0,10)}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        get().notify('Spielstand exportiert!', 'success')
+      },
+
+      importSave: (jsonString) => {
+        try {
+          const data = JSON.parse(jsonString)
+          if (!data.resources || !data.buildings) throw new Error('Ungültiger Spielstand')
+          set((s) => {
+            if (data.resources)     s.resources     = data.resources
+            if (data.buildings)     s.buildings     = data.buildings
+            if (data.researchDone)  s.researchDone  = data.researchDone
+            if (data.summons)       s.summons       = data.summons
+            if (data.totalCollected)s.totalCollected= data.totalCollected
+            if (data.stats)         s.stats         = data.stats
+            if (data.player)        s.player        = data.player
+            if (data.prestige)      s.prestige      = data.prestige
+            if (data.quests)        s.quests        = data.quests
+            if (data.achievements)  s.achievements  = data.achievements
+            if (data.settings)      s.settings      = data.settings
+          })
+          get().notify('Spielstand importiert!', 'success')
+          get().addLog('📂 Spielstand importiert.', 'system')
+        } catch (e) {
+          get().notify(`Import fehlgeschlagen: ${e.message}`, 'error')
+        }
+      },
 
       // ── Buildings ────────────────────────────────────────────────────────
       buildOrUpgrade: (id) => {
@@ -360,6 +517,22 @@ export const useGameStore = create(
         // Quest daily refresh (check ~every 60s)
         if (Math.random() < 1 / 60) get().checkQuestRefresh()
 
+        // Achievement check (every ~10s)
+        if (Math.random() < 1 / 10) get().checkAchievements()
+
+        // Clean up expired buffs
+        const nowMs = Date.now()
+        set((st) => { st.activeBuffs = (st.activeBuffs || []).filter((b) => b.endsAt > nowMs) })
+
+        // Fire random event
+        if (!s.activeEvent && nowMs >= (s.nextEventAt ?? 0)) {
+          const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)]
+          set((st) => {
+            st.activeEvent  = { ...ev, firedAt: nowMs }
+            st.nextEventAt  = nowMs + get().nextEventDelay()
+          })
+        }
+
         // Boss combat
         if (s.bossFight) {
           set((st) => {
@@ -421,6 +594,8 @@ export const useGameStore = create(
         prestige:     s.prestige,
         quests:       s.quests,
         tutorial:     s.tutorial,
+        settings:     s.settings,
+        achievements: s.achievements,
         lastSaveTime: s.lastSaveTime,
         log:          s.log.slice(0, 50),
         logId:        s.logId,

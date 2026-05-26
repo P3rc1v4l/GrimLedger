@@ -54,7 +54,7 @@ export default function BuildingsPanel() {
               key={id}
               style={{
                 background: lvl > 0
-                  ? 'linear-gradient(135deg, rgba(30,10,10,0.9) 0%, rgba(20,8,8,0.9) 100%)'
+                  ? 'linear-gradient(135deg, rgba(30,14,42,0.9) 0%, rgba(20,10,30,0.9) 100%)'
                   : 'rgba(10,8,10,0.6)',
                 border: `1px solid ${lvl > 0 ? 'rgba(74,0,0,0.5)' : 'rgba(42,32,40,0.3)'}`,
                 borderRadius: '10px',

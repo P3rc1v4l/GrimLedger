@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { id: 'beschwoerung', icon: '🔮', label: 'Beschwörung'  },
   { id: 'bosse',        icon: '⚔️', label: 'Bosse'        },
   { id: 'quests',       icon: '🎯', label: 'Quests'       },
+  { id: 'achievements', icon: '🏆', label: 'Achievements'  },
   { id: 'aufstieg',     icon: '⬡',  label: 'Aufstieg'     },
   { id: 'einstellungen',icon: '⚙️', label: 'Einstellungen'},
 ]
