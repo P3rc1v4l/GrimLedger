@@ -32,19 +32,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Read version from package.json for the release title
       - name: Read version
         id: version
         shell: bash
         run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
 
-      # Build EXE (no publish — just create the installer)
       - name: Build EXE
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Upload EXE as artifact (always available regardless of release)
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -52,10 +49,9 @@ jobs:
           path: release/*.exe
           retention-days: 30
 
-      # Create GitHub Release ONLY when create_release=true or triggered by tag
       - name: Create GitHub Release
         if: ${{ github.event.inputs.create_release == 'true' || github.event_name == 'push' }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: GrimLedger v${{ steps.version.outputs.version }}
