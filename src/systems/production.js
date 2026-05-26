@@ -1,4 +1,4 @@
-import { BUILDINGS, RESEARCH } from './constants'
+import { BUILDINGS, RESEARCH } from '../utils/constants'
 
 // Returns { resourceKey: productionPerSecond } for the current state
 export function calcProductionRates(state) {

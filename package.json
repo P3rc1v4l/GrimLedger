@@ -1,8 +1,9 @@
 {
   "name": "grim-ledger",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "GrimLedger – Dunkles Idle-RPG",
   "private": true,
+  "type": "module",
   "main": "electron/main.cjs",
   "homepage": "./",
   "scripts": {
