@@ -17,7 +17,7 @@ permissions:
   contents: write
 
 jobs:
-  release-windows:
+  build-windows:
     runs-on: windows-latest
 
     steps:
@@ -32,17 +32,42 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build & publish release
+      # Read version from package.json for the release title
+      - name: Read version
+        id: version
+        shell: bash
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+      # Build EXE (no publish — just create the installer)
+      - name: Build EXE
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Only publish when input is 'true' OR when triggered by a tag push
-          EP_DRAFT: false
-          PUBLISH_FLAG: ${{ github.event.inputs.create_release == 'true' || github.event_name == 'push' }}
 
-      - name: Upload EXE as artifact (always, as backup)
+      # Upload EXE as artifact (always available regardless of release)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GrimLedger-Windows-${{ github.run_number }}
+          name: GrimLedger-Windows-v${{ steps.version.outputs.version }}
           path: release/*.exe
           retention-days: 30
+
+      # Create GitHub Release ONLY when create_release=true or triggered by tag
+      - name: Create GitHub Release
+        if: ${{ github.event.inputs.create_release == 'true' || github.event_name == 'push' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: GrimLedger v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+          body: |
+            ## GrimLedger v${{ steps.version.outputs.version }}
+
+            Lade die Installer-EXE unten herunter und führe sie aus.
+
+            **Hinweis:** Wenn Windows SmartScreen eine Warnung zeigt, klicke auf "Weitere Informationen" → "Trotzdem ausführen".
+          files: release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
