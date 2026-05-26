@@ -2,12 +2,6 @@ name: Build & Release GrimLedger
 
 on:
   workflow_dispatch:
-    inputs:
-      create_release:
-        description: 'Release erstellen?'
-        required: false
-        default: true
-        type: boolean
   push:
     tags:
       - 'v*'
@@ -50,7 +44,6 @@ jobs:
           retention-days: 30
 
       - name: Create GitHub Release
-        if: ${{ inputs.create_release == true || github.event_name == 'push' }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.pkg.outputs.version }}
