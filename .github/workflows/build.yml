@@ -1,10 +1,20 @@
 name: Build & Release GrimLedger
 
 on:
-  workflow_dispatch:    # Nur manuell: Actions → "Build & Release GrimLedger" → "Run workflow"
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Release erstellen?'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['false', 'true']
+  push:
+    tags:
+      - 'v*'
 
 permissions:
-  contents: write       # needed to create GitHub Releases
+  contents: write
 
 jobs:
   release-windows:
@@ -23,10 +33,16 @@ jobs:
         run: npm install
 
       - name: Build & publish release
-        # electron-builder reads the version from package.json,
-        # creates a GitHub Release tagged v<version> and uploads the installer.
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Tell electron-builder to publish (creates the GitHub Release + tag)
+          # Only publish when input is 'true' OR when triggered by a tag push
           EP_DRAFT: false
+          PUBLISH_FLAG: ${{ github.event.inputs.create_release == 'true' || github.event_name == 'push' }}
+
+      - name: Upload EXE as artifact (always, as backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GrimLedger-Windows-${{ github.run_number }}
+          path: release/*.exe
+          retention-days: 30
